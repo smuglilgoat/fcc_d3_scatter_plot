@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>FCC D3 Scatter Plot</title>
+</head>
+
+<body>
+    <h1 id="title">Doping in Professional Bicycle Racing</h1>
+</body>
+<script>
+    const margin = { top: 30, right: 30, bottom: 30, left: 60 },
+        width = 1200 - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom;
+
+    const svg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.json(
+        "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json"
+    ).then((data) => {
+        console.log(data);
+
+        const time = data.map(
+            (d) =>
+                new Date(1998, 11, 4, 1, d.Time.split(":")[0], d.Time.split(":")[1])
+        );
+        const year = data.map((d) => d.Year);
+
+        console.table(time);
+        console.table(year);
+
+        const xScale = d3
+            .scaleLinear()
+            .domain([d3.min(year) - 1, d3.max(year) + 1])
+            .range([0, width]);
+
+        const xAxis = d3.axisBottom().scale(xScale).tickFormat(d3.format("d"));
+
+        svg
+            .append("g")
+            .attr("transform", `translate(60, ${height})`)
+            .call(xAxis)
+            .attr("id", "x-axis");
+
+        const yScale = d3
+            .scaleTime()
+            .domain([d3.min(time), d3.max(time)])
+            .range([0, height]);
+
+        const yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat("%M:%S"));
+
+        svg
+            .append("g")
+            .attr("transform", `translate(60, 00)`)
+            .call(yAxis)
+            .attr("id", "y-axis");
+
+        const colorScale = d3.scaleOrdinal().range(["blue", "red"]);
+
+        const tooltip = d3
+            .select("body")
+            .append("div")
+            .attr("id", "tooltip")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden")
+            .style("padding", "10px")
+            .style("background", "rgba(0,0,0,0.6)")
+            .style("border-radius", "4px")
+            .style("color", "#fff")
+            .text("a simple tooltip");
+
+        svg
+            .selectAll("chart")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("class", "dot")
+            .attr("r", 10)
+            .attr("cx", (d) => xScale(d.Year))
+            .attr("cy", (d) =>
+                yScale(
+                    new Date(1998, 11, 4, 1, d.Time.split(":")[0], d.Time.split(":")[1])
+                )
+            )
+            .attr("data-xvalue", function (d) {
+                return d.Year;
+            })
+            .attr("data-yvalue", function (d) {
+                return new Date(
+                    1998,
+                    11,
+                    4,
+                    1,
+                    d.Time.split(":")[0],
+                    d.Time.split(":")[1]
+                );
+            })
+            .style("fill", function (d) {
+                return colorScale(d.Doping !== "");
+            })
+            .attr("transform", "translate(" + margin.left + "," + "0" + ")")
+            .on("mouseover", function (event, d) {
+                tooltip
+                    .html(
+                        `<div>Name: ${d.Name}</div><div>Date: ${d.Year}</div><div>Time: ${d.Time}</div><div>${d.Doping}</div>`
+                    )
+                    .style("visibility", "visible")
+                    .attr("data-year", this.getAttribute("data-xvalue"));
+            })
+            .on("mousemove", function (event) {
+                tooltip.style("top", event.y + "px").style("left", event.x + "px");
+            })
+            .on("mouseout", function () {
+                tooltip.html(``).style("visibility", "hidden");
+            });
+
+        const legend = svg
+            .append("g")
+            .attr("id", "legend")
+            .selectAll("#legend")
+            .data(colorScale.domain())
+            .enter()
+            .append("g")
+            .attr("transform", function (d, i) {
+                return "translate(0," + (height / 2 - i * 20) + ")";
+            });
+
+        legend
+            .append("rect")
+            .attr("x", width)
+            .attr("width", 15)
+            .attr("height", 15)
+            .style("fill", colorScale);
+
+        legend
+            .append("text")
+            .attr("x", width - 5)
+            .attr("y", 12)
+            .style("text-anchor", "end")
+            .text(function (d) {
+                if (d) {
+                    return "Doping allegations";
+                } else {
+                    return "No doping";
+                }
+            });
+    });
+</script>
+
+</html>
